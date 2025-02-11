@@ -34,46 +34,44 @@ def analyze():
 
     # Fetch track details from Spotify API
     track_details = []
+    import time
+
     for track_id in track_ids:
         try:
             track_info = sp.track(track_id)
             track_name = track_info['name']
             artist_name = track_info['artists'][0]['name']
             track_details.append(f"{track_name}, {artist_name}")
+            time.sleep(0.2)  # 200ms delay to avoid rate-limiting
         except Exception as e:
             track_details.append(f"Error fetching track {track_id}: {str(e)}")
 
-    # Split into batches of 100 songs to avoid hitting OpenAI's token limit
-    batch_size = 200
-    batches = [track_details[i:i + batch_size] for i in range(0, len(track_details), batch_size)]
 
+    # Format all track data into a single text block
+    formatted_text = "\n".join(track_details)
+    print(formatted_text)
+
+    # Create a single request with all track data
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    analysis_results = []
-
-    for batch in batches:
-        prompt = f"""
+    prompt = f"""
 The following are song titles and artists extracted from Spotify links:
 ---
-{'\n'.join(batch)}
+{formatted_text}
 ---
-Analyze the songs and return the results in CSV formats, include the title, artist and language
-        """
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.3
-            )
-            analysis_results.append(response.choices[0].message.content)
-        except Exception as e:
-            analysis_results.append(f"An error occurred: {str(e)}")
+Analyze the songs and return the results in CSV format. Ensure that you have the Artist, Name of Song, and Language
+    """
 
-    # Combine all results
-    analysis = "\n".join(analysis_results)
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3
+        )
+        analysis = response.choices[0].message.content
+    except Exception as e:
+        analysis = f"An error occurred: {str(e)}"
 
     return render_template('analyze.html', analysis=analysis, user={"name": "User"})
-
-
 
 if __name__ == '__main__':
     app.run(debug=True)
