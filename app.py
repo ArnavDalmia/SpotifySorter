@@ -20,6 +20,31 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
     client_secret=SPOTIFY_CLIENT_SECRET
 ))
 
+def clean():
+    with open('newSorted.csv', 'r') as file:
+        content = file.read()
+    content = content.strip().strip('"')
+    lines = content.splitlines()
+
+    clean_lines = []
+    for line in lines:
+        line = line.strip()
+        if line.startswith("```"):
+            continue
+        if line.startswith("track_id"):
+            continue
+        clean_lines.append(line)
+
+    #writing cleaned csv
+    with open('cleaned.csv', 'w', newline='') as outfile:
+        outfile.write("track_id, language" + "\n")
+
+    with open('cleaned.csv', 'a', newline='') as outfile:
+        for line in clean_lines:
+            outfile.write(line + "\n")
+    print("Cleaned CSV")
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -57,7 +82,7 @@ def analyze():
         ---
         Analyze the songs and return the results in CSV format. Provide the track id once again, and the determined Language in that order. (track_id, language)
         
-        Only provide the results that correspond to the users choice given in {diff}. This can be something like the language of choice or even a genre. If nothing is given in this, then simply default to language: English.
+        Only provide the results that correspond to the users choice given in {diff}. This can be something like the language of choice or even a genre. If nothing is given in this, then simply don't filter anything and return all the songs given.
 
         In your output start directly with the headers, skip any descriptions or anything, the first character I should see is t from track_id.
         """
@@ -81,6 +106,9 @@ def analyze():
 
     with open('newSorted.csv', 'w', newline='') as csvfile:
         csvfile.write(final_analysis)
+
+    clean() #cleaned csv into cleaned.csv
+    # now just need to parse this and create a playlist
 
     return render_template('analyze.html', analysis=final_analysis, user={"name": "User"})
 
