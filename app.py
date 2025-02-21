@@ -60,7 +60,10 @@ def playlist():
     print(f"Created playlist {playlist_name} with ID {playlist_id}")
     sp.playlist_add_items(playlist_id, track_ids)
     print("Tracks added to the playlist!")
-            
+
+    playlist_url = playlist['external_urls']['spotify']
+    
+    return playlist_url
 
 
 @app.route('/')
@@ -128,11 +131,10 @@ def analyze():
     clean() #cleaned csv into cleaned.csv
     # now just need to parse this and create a playlist
 
-    
+    playlist_link = playlist()
+    final = "Playlist Link: " + playlist_link
 
-    return render_template('analyze.html', analysis=final_analysis, user={"name": "User"})
-
-
+    return render_template('analyze.html', final, user={"name": "User"})
 
 
 if __name__ == '__main__':
