@@ -4,7 +4,9 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
+from spotipy.oauth2 import SpotifyOAuth
 import time
+import csv
 
 # Load environment variables
 load_dotenv()
@@ -13,12 +15,15 @@ app = Flask(__name__)
 # API creds
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+SCOPE = "playlist-modify-private user-read-private"
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
-sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
-    client_id=SPOTIFY_CLIENT_ID,
-    client_secret=SPOTIFY_CLIENT_SECRET
-))
+REDIRECT_URI = "http://localhost/"
+
+sp = spotipy.Spotify(auth_manager=SpotifyOAuth(client_id=SPOTIFY_CLIENT_ID,
+                                               client_secret=SPOTIFY_CLIENT_SECRET,
+                                               redirect_uri=REDIRECT_URI,
+                                               scope=SCOPE))
 user_id = sp.current_user()['id']
 
 
@@ -41,18 +46,19 @@ def clean():
     with open('cleaned.csv', 'w', newline='') as outfile:
         outfile.write("track_id, language" + "\n")
 
-    with open('cleaned.csv', 'a', newline='') as outfile:
+    with open('cleaned.csv', 'w', newline='') as outfile:
         for line in clean_lines:
             outfile.write(line + "\n")
     print("Cleaned CSV")
 
 def playlist():
     track_ids = []
-    with open('newSorted.csv', mode ='r')as file:
+    with open('cleaned.csv', mode ='r')as file:
         csvFile = csv.reader(file)
         for lines in csvFile:
             track_ids.append(lines[0])
-    
+    print(track_ids)
+
     playlist_name = "Special Playlist Numero Uno"
     playlist_description = "This playlist contains the songs from my Liked Songs that I can't be bothered to sort"
     playlist = sp.user_playlist_create(user=user_id, name=playlist_name, public=False, description=playlist_description)
@@ -60,10 +66,6 @@ def playlist():
     print(f"Created playlist {playlist_name} with ID {playlist_id}")
     sp.playlist_add_items(playlist_id, track_ids)
     print("Tracks added to the playlist!")
-
-    playlist_url = playlist['external_urls']['spotify']
-    
-    return playlist_url
 
 
 @app.route('/')
@@ -131,8 +133,8 @@ def analyze():
     clean() #cleaned csv into cleaned.csv
     # now just need to parse this and create a playlist
 
-    playlist_link = playlist()
-    final = "Playlist Link: " + playlist_link
+    playlist()
+    final = "WOW your playlist has been made, go check it out! "
 
     return render_template('analyze.html', final, user={"name": "User"})
 
