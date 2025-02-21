@@ -19,6 +19,8 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
     client_id=SPOTIFY_CLIENT_ID,
     client_secret=SPOTIFY_CLIENT_SECRET
 ))
+user_id = sp.current_user()['id']
+
 
 def clean():
     with open('newSorted.csv', 'r') as file:
@@ -43,6 +45,22 @@ def clean():
         for line in clean_lines:
             outfile.write(line + "\n")
     print("Cleaned CSV")
+
+def playlist():
+    track_ids = []
+    with open('newSorted.csv', mode ='r')as file:
+        csvFile = csv.reader(file)
+        for lines in csvFile:
+            track_ids.append(lines[0])
+    
+    playlist_name = "Special Playlist Numero Uno"
+    playlist_description = "This playlist contains the songs from my Liked Songs that I can't be bothered to sort"
+    playlist = sp.user_playlist_create(user=user_id, name=playlist_name, public=False, description=playlist_description)
+    playlist_id = playlist['id']
+    print(f"Created playlist {playlist_name} with ID {playlist_id}")
+    sp.playlist_add_items(playlist_id, track_ids)
+    print("Tracks added to the playlist!")
+            
 
 
 @app.route('/')
@@ -110,7 +128,10 @@ def analyze():
     clean() #cleaned csv into cleaned.csv
     # now just need to parse this and create a playlist
 
+    
+
     return render_template('analyze.html', analysis=final_analysis, user={"name": "User"})
+
 
 
 
