@@ -10,18 +10,15 @@ import time
 load_dotenv()
 app = Flask(__name__)
 
-# Spotify API credentials
+# API creds
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
-
-# Initialize Spotify client
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
     client_id=SPOTIFY_CLIENT_ID,
     client_secret=SPOTIFY_CLIENT_SECRET
 ))
-
-# OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 @app.route('/')
 def index():
@@ -29,26 +26,23 @@ def index():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    # Get Spotify links from the form
+    diff = request.form.get('diff', '')
     spotify_links = request.form.get('liked_songs', '').splitlines()
-
-    # Extract track IDs from the links
     track_ids = [link.split("open.spotify.com/track/")[1].split("?")[0]
                  for link in spotify_links if "open.spotify.com/track/" in link]
 
-    # Fetch track details from Spotify API
     track_details = []
     for track_id in track_ids:
         try:
             track_info = sp.track(track_id)
             track_name = track_info['name']
             artist_name = track_info['artists'][0]['name']
-            track_details.append(f"{track_name}, {artist_name}")
-            time.sleep(0.3)  # 200ms delay to avoid Spotify rate-limiting
+            track_details.append(f"{track_id}, {track_name}, {artist_name}")
+            time.sleep(0.3)  #delay for Spotify rate-limiting
         except Exception as e:
             track_details.append(f"Error fetching track {track_id}: {str(e)}")
 
-    # Split track details into batches of 150 lines
+    # Batching of 150 lines for defeating rate limiting
     batch_size = 150
     batches = [track_details[i:i + batch_size] for i in range(0, len(track_details), batch_size)]
 
@@ -61,7 +55,11 @@ def analyze():
         ---
         {formatted_text}
         ---
-        Analyze the songs and return the results in CSV format. Ensure that you have the Artist, Name of Song, and Language.
+        Analyze the songs and return the results in CSV format. Provide the track id once again, and the determined Language in that order. (track_id, language)
+        
+        Only provide the results that correspond to the users choice given in {diff}. This can be something like the language of choice or even a genre. If nothing is given in this, then simply default to language: English.
+
+        In your output start directly with the headers, skip any descriptions or anything, the first character I should see is t from track_id.
         """
 
         try:
@@ -75,12 +73,18 @@ def analyze():
         except Exception as e:
             all_results.append(f"An error occurred: {str(e)}")
 
-        # Add a delay between batches to avoid OpenAI rate limits
-        time.sleep(10)  # 10-second delay between batches
+        #delay between batches for OpenAI rate limitinhg
+        time.sleep(10)
 
     # Combine all batch results
     final_analysis = "\n".join(all_results)
+
+    with open('newSorted.csv', 'w', newline='') as csvfile:
+        csvfile.write(final_analysis)
+
     return render_template('analyze.html', analysis=final_analysis, user={"name": "User"})
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)

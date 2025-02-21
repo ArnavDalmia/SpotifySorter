@@ -11,7 +11,12 @@
         <form action="/analyze" method="POST" enctype="multipart/form-data">
             <div class="mb-3">
                 <label class="form-label">Copy and Pasted Liked Songs:</label>
-                <textarea class="form-control" name="liked_songs" rows="5"></textarea>
+                <textarea class="form-control" name="liked_songs" rows="5" required></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Whatever filter you want (ex: (Language: Hindi)):</label>
+                <textarea class="form-control" name="diff" rows="5" required></textarea>
             </div>
         
             <button type="submit" class="btn btn-primary">Analyze</button>
