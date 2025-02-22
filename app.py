@@ -51,22 +51,37 @@ def clean():
             outfile.write(line + "\n")
     print("Cleaned CSV")
 
-def playlist():
+def playlist(existing):
     track_ids = []
-    with open('cleaned.csv', mode ='r')as file:
+    with open('cleaned.csv', mode='r') as file:
         csvFile = csv.reader(file)
-        for lines in csvFile:
+        for i, lines in enumerate(csvFile):
+            # Skip header if there's one
+            if i == 0 and lines[0] == "track_id":
+                continue
             track_ids.append(lines[0])
-    print(track_ids)
+    print("Tracks Appended")
 
-    playlist_name = "Special Playlist Numero Uno"
-    playlist_description = "This playlist contains the songs from my Liked Songs that I can't be bothered to sort"
-    playlist = sp.user_playlist_create(user=user_id, name=playlist_name, public=False, description=playlist_description)
-    playlist_id = playlist['id']
-    print(f"Created playlist {playlist_name} with ID {playlist_id}")
-    sp.playlist_add_items(playlist_id, track_ids)
-    print("Tracks added to the playlist!")
+    if existing == "none":
+        playlist_name = "Indian Music Test"
+        playlist_description = "This playlist contains the songs from my Liked Songs that I can't be bothered to sort"
+        playlist = sp.user_playlist_create(user=user_id, name=playlist_name, public=False, description=playlist_description)
+        playlist_id = playlist['id']
+        print(f"Created playlist {playlist_name} with ID {playlist_id}")
+    else:
+        playlist_id  = existing
 
+    # Batching the track_ids into groups of 100
+    chunk_size = 99
+    for i in range(0, len(track_ids), chunk_size):
+        chunk = track_ids[i:i+chunk_size]
+
+        sp.playlist_add_items(playlist_id, chunk)
+        print(f"Added {len(chunk)} tracks to the playlist.")
+
+        time.sleep(2) # defeat rate limiting
+
+    print("All tracks added to the playlist!")
 
 @app.route('/')
 def index():
@@ -86,7 +101,7 @@ def analyze():
             track_name = track_info['name']
             artist_name = track_info['artists'][0]['name']
             track_details.append(f"{track_id}, {track_name}, {artist_name}")
-            time.sleep(0.3)  #delay for Spotify rate-limiting
+            time.sleep(2)  #delay for Spotify rate-limiting
         except Exception as e:
             track_details.append(f"Error fetching track {track_id}: {str(e)}")
 
@@ -122,7 +137,7 @@ def analyze():
             all_results.append(f"An error occurred: {str(e)}")
 
         #delay between batches for OpenAI rate limitinhg
-        time.sleep(10)
+        time.sleep(5)
 
     # Combine all batch results
     final_analysis = "\n".join(all_results)
@@ -133,7 +148,7 @@ def analyze():
     clean() #cleaned csv into cleaned.csv
     # now just need to parse this and create a playlist
 
-    playlist()
+    playlist(os.getenv("PLAYLIST"))
     final = "WOW your playlist has been made, go check it out! "
 
     return render_template('analyze.html', analysis = final, user={"name": "User"})

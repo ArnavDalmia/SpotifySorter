@@ -2,3 +2,8 @@ sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
     client_id=SPOTIFY_CLIENT_ID,
     client_secret=SPOTIFY_CLIENT_SECRET
 ))
+
+
+    playlist_url = playlist['external_urls']['spotify']
+    
+    return playlist_url
