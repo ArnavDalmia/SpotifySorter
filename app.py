@@ -133,10 +133,10 @@ def analyze():
     clean() #cleaned csv into cleaned.csv
     # now just need to parse this and create a playlist
 
-    playlist()
-    final = "WOW your playlist has been made, go check it out! "
+    #playlist()
+    #final = "WOW your playlist has been made, go check it out! "
 
-    return render_template('analyze.html', final, user={"name": "User"})
+    return render_template('analyze.html', analysis = final_analysis, user={"name": "User"})
 
 
 if __name__ == '__main__':
